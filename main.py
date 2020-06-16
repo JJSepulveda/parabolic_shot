@@ -71,7 +71,7 @@ def main():
 	referee_view = world.rules_view()
 	referee_controller = world.rules_controller(referee_model, referee_view)
 
-	weapon_model = weapon.weapon(0, 0, surf)
+	weapon_model = weapon.weapon(50, 400, window)
 	weapon_view = weapon.weapon_view()
 	weapon_controller = weapon.weapon_controller(weapon_model, weapon_view)
 
