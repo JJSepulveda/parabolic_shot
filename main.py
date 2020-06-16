@@ -25,6 +25,7 @@ fpsClock = pygame.time.Clock()
 
 fire_flag = False
 degree = 0
+status_bar = False
 
 def events ():
 	for event in pygame.event.get():
@@ -39,6 +40,9 @@ def events ():
 				print("evento")
 				degree += 5
 				pass
+			elif (event.key == pygame.K_p):
+				global status_bar
+				status_bar = not status_bar
 
 def background():
 	window.fill((BACKGROUND_COLOR))
@@ -82,6 +86,10 @@ def main():
 	weapon_view = weapon.weapon_view()
 	weapon_controller = weapon.weapon_controller(weapon_model, weapon_view)
 
+	weapon_bar = weapon.weapon_bar(100, 100, window)
+	weapon_bar_view = weapon.weapon_bar_view()
+	weapon_bar_controller = weapon.weapon_bar_controller(weapon_bar, weapon_bar_view)
+
 
 	global fire_flag
 	global degree
@@ -96,12 +104,14 @@ def main():
 
 		referee_controller.Check_edges()
 
+		weapon_bar_controller.Update_view()
+
+		weapon_bar_controller.Update_bar(status_bar)
 
 		if(fire_flag):
 			#force = PVector(50,-50)
 			#projectile_controller.Apply_force(force)
 			fire_flag = False
-			weapon_controller.Rotate_weapon(45)
 			#weapon_controller.Update_view(degree)
 		weapon_controller.Update_view(degree)
 
