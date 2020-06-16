@@ -78,7 +78,6 @@ class world_view (object):
 	def world_draw(self, x, y, w, h, surface):
 		points = [(x, y), (x + w, y), (x + w, y + h), (x , y + h)]
 		pygame.draw.polygon(surface, (0, 0, 0), points, 0)
-		pass
 
 class rules_view(object):
 	def __init__(self):

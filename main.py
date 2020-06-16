@@ -24,6 +24,7 @@ pygame.display.set_caption("Parabolic shot")
 fpsClock = pygame.time.Clock()
 
 fire_flag = False
+degree = 0
 
 def events ():
 	for event in pygame.event.get():
@@ -33,8 +34,10 @@ def events ():
 		elif(event.type == pygame.KEYDOWN):
 			if(event.key == pygame.K_o):
 				global fire_flag
+				global degree
 				fire_flag = True
 				print("evento")
+				degree += 5
 				pass
 
 def background():
@@ -56,9 +59,13 @@ def update_surface_task():
 ##################################################
 
 def main():
+	# tiempo de retraso en milisegundos en la primera repetición
+	delay = 101
+	# intervalo de tiempo en milisegundos entre repeticiones
+	interval = 100
+	# habilita la repetición de teclas
+	pygame.key.set_repeat(delay, interval)
 	
-	
-
 	projectile_model = parabolic.projectile(20, 400, 10, window)
 	projectile_view = parabolic.projectile_view()
 	projectile_controller = parabolic.projectile_controller(projectile_model, projectile_view)
@@ -77,6 +84,7 @@ def main():
 
 
 	global fire_flag
+	global degree
 
 	while(True):
 		background()
@@ -88,12 +96,14 @@ def main():
 
 		referee_controller.Check_edges()
 
-		weapon_controller.Update_view()
 
 		if(fire_flag):
-			force = PVector(50,-50)
-			projectile_controller.Apply_force(force)
+			#force = PVector(50,-50)
+			#projectile_controller.Apply_force(force)
 			fire_flag = False
+			weapon_controller.Rotate_weapon(45)
+			#weapon_controller.Update_view(degree)
+		weapon_controller.Update_view(degree)
 
 		events()
 		update_surface_task()
