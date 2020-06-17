@@ -57,7 +57,7 @@ class weapon_bar (object):
 		self.surface = surface
 		self.max_bar_width = 200
 		self.vector_magnitude = 0
-		self.max_magnitude = 50
+		self.max_magnitude = 100
 	
 	def Get_surface(self):
 		return self.surface
@@ -172,7 +172,7 @@ class weapon_bar_controller (object):
 	def Get_magnitude(self):
 		return self.model.Get_vector_magnitude()
 
-	def Reset_bar(self):
+	def Reset(self):
 		self.model.Set_vector_magnitude(0)
 		self.model.Set_width(0)
 

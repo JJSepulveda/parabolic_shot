@@ -18,6 +18,8 @@ GRAVITY_ACCELERATION = 0.1
 ###################
 class projectile(object):
 	def __init__(self, x, y, r, surface):
+		self.backup_x = x
+		self.backup_y = y
 		self.projectile_position = PVector(x, y)
 		self.projectile_velocity = PVector(0, 0)
 		self.projectile_acceleration = PVector(0, 0)
@@ -32,6 +34,8 @@ class projectile(object):
 	def Get_position(self):
 		x, y = self.projectile_position.Get_components()
 		return x, y
+	def Get_init_position(self):
+		return self.backup_x, self.backup_y
 	def Set_velocity(self, x, y):
 		self.projectile_velocity.set(x, y)
 	def Get_velocity(self):
@@ -106,6 +110,9 @@ class projectile_controller(object):
 	def Apply_force(self, force_vector):
 		self.model.Apply_force(force_vector)
 	def Reset (self):
+		x, y = self.model.Get_init_position()
+		self.model.Set_position(x, y)
+		self.model.Set_velocity(0,0)
 		pass
 	def Update_model(self):
 		self.model.Apply_gravity()

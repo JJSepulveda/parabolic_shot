@@ -5,6 +5,7 @@ import sys
 import parabolic
 import world
 import weapon
+import math
 from utilities import *
 
 WIDTH = 700
@@ -19,6 +20,9 @@ RIGHT_BUTTON = 2
 LEFT_BUTTON = 0
 WEAPON_X = 50
 WEAPON_Y = 400
+AIMING_STATE = 0
+SHOOT_STATE = 1
+POST_SHOOT_STATE = 3 
 
 pygame.init()
 window = pygame.display.set_mode((FINAL_WIDTH,FINAL_HEIGHT))
@@ -26,8 +30,6 @@ pygame.display.set_caption("Parabolic shot")
 fpsClock = pygame.time.Clock()
 
 fire_flag = False
-
-status_bar = False
 
 weapon_vector_position = PVector(WEAPON_X, WEAPON_Y)
 mouse_vector_position = PVector(0, 0)
@@ -44,6 +46,22 @@ def get_degrees(weapon_w, weapon_h):
 	#print("degree: {}, x: {}, y: {}".format(degree, weapon_vector_position.x, weapon_vector_position.y))
 	return degree
 
+def get_shoot_components(degree):
+	rad = math.radians(degree)
+	x = math.cos(rad)
+	y = math.sin(rad)
+	return x, y
+
+def limit_degrees(degrees):
+	r = 0
+	if(degrees > 270):
+		r = 0
+	elif(degrees > 90):
+		r = 90
+	else:
+		r = degrees
+	return r
+
 def shoot_force(x, y, magnitude):
 	force = PVector(x, y)
 	force.normalize()
@@ -58,12 +76,10 @@ def events ():
 		elif(event.type == pygame.KEYDOWN):
 			if(event.key == pygame.K_o):
 				global fire_flag
-				global degree
 				fire_flag = True
 				pass
 			elif (event.key == pygame.K_p):
-				global status_bar
-				status_bar = not status_bar
+				pass
 
 def background():
 	window.fill((BACKGROUND_COLOR))
@@ -73,6 +89,47 @@ def background():
 def update_surface_task():
 	pygame.display.update()
 	fpsClock.tick(FPS)
+
+def srpites_test(cols, rows):
+	total_cells = cols * rows
+	sheet = pygame.image.load('sprites/balah.png')
+	sheet_scale = pygame.transform.scale(sheet, (200, 200))
+
+	rect = sheet_scale.get_rect()
+	w = rect.width/cols
+	h = rect.height/rows
+ 
+	center = (w/2, h/2)
+
+	rect_position = (0 + center[0], 0 + center[1])
+
+	#window.blit(sheet_scale, rect_position, (0, 0, w, h))
+
+	cells = get_cells_dimensions_array(cols, rows, w, h)
+	print(cells[0])
+	print(cells[1])
+
+	n = 1
+	return sheet_scale, rect_position, cells, (w, h)
+
+def get_cells_dimensions_array(cols, rows, w, h):
+	cells = []
+	for r in range(rows):
+		for c in range(cols):
+			x1 = c*w
+			y1 = r*h
+
+			frame_data = {'x1': x1, 'y1': y1}
+
+			#print(frame_data)
+			cells.append(frame_data)
+
+	return cells
+
+
+def change_sprite():
+	pass
+
 
 ##################################################
 # Tiro parabolico
@@ -111,10 +168,26 @@ def main():
 	weapon_bar_view = weapon.weapon_bar_view()
 	weapon_bar_controller = weapon.weapon_bar_controller(weapon_bar, weapon_bar_view)
 
+	actual_state = AIMING_STATE
+
+	shoot_x = 0
+	shoot_y = 0
+	degree = 0
+
+	sprt_surf, pos, cells, size = srpites_test(3, 3)
 
 	global fire_flag
+	status_bar = False
+
+	#srpit update frames
+	actual_time = 0
+	next_frame = 80
+	print("clock: {}".format(fpsClock.get_rawtime))
+	frame = 0
 
 	while(True):
+		actual_time += fpsClock.get_time()
+		#print("clock: {}".format(fpsClock.get_fps()))
 		background()
 
 		projectile_controller.Update_model()
@@ -129,16 +202,50 @@ def main():
 
 		weapon_bar_controller.Update_bar(status_bar)
 
-		if(fire_flag):
-			#force = shoot_force(x, y, magnitude)
-			#projectile_controller.Apply_force(force)
-			fire_flag = False
-			#weapon_controller.Update_view(degree)
-		weapon_w, weapon_h = weapon_controller.Get_size()
-		degree = get_degrees(weapon_w, weapon_h)
-		weapon_controller.Update_view(degree)
+		#state machine
+		if(actual_state == AIMING_STATE):
+			weapon_w, weapon_h = weapon_controller.Get_size()
+			degree = get_degrees(weapon_w, weapon_h)
+			weapon_controller.Update_view(degree)
 
+			if(fire_flag):
+				fire_flag = False
+				degree = limit_degrees(degree)
+				shoot_x, shoot_y = get_shoot_components(degree)
+				actual_state = SHOOT_STATE
+				status_bar = True
+				print("change state")
+
+		elif(actual_state == SHOOT_STATE):
+			weapon_controller.Update_view(degree)
+			if(fire_flag):
+				magnitude = weapon_bar_controller.Get_magnitude()
+				force = shoot_force(shoot_x, shoot_y, magnitude)
+				projectile_controller.Apply_force(force)
+				fire_flag = False
+				actual_state = POST_SHOOT_STATE
+				status_bar =  False
+				print("change state")
+		elif(actual_state == POST_SHOOT_STATE):
+			weapon_controller.Update_view(degree)
+			if(fire_flag):
+				fire_flag = False
+				projectile_controller.Reset()
+				weapon_bar_controller.Reset()
+				actual_state = AIMING_STATE
+				print("change state")
+
+
+		if(actual_time > next_frame):
+			frame = (frame + 1) % 7
+			actual_time = 0
+
+		window.blit(sprt_surf, pos)
+
+		window.blit(sprt_surf, (pos[0], pos[1] +200), (cells[frame]['x1'], cells[frame]['y1'], size[0], size[1]))
+		
 		events()
+
 		update_surface_task()
 		pass
 
