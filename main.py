@@ -17,6 +17,8 @@ FINAL_WIDTH = WIDTH_PANEL + WIDTH
 FINAL_HEIGHT = HEIGHT_PANEL + HEIGHT
 RIGHT_BUTTON = 2
 LEFT_BUTTON = 0
+WEAPON_X = 50
+WEAPON_Y = 400
 
 pygame.init()
 window = pygame.display.set_mode((FINAL_WIDTH,FINAL_HEIGHT))
@@ -24,8 +26,29 @@ pygame.display.set_caption("Parabolic shot")
 fpsClock = pygame.time.Clock()
 
 fire_flag = False
-degree = 0
+
 status_bar = False
+
+weapon_vector_position = PVector(WEAPON_X, WEAPON_Y)
+mouse_vector_position = PVector(0, 0)
+
+def get_degrees(weapon_w, weapon_h):
+	global weapon_vector_position
+	global mouse_vector_position
+	weapon_vector_position.set(WEAPON_X + weapon_w/2, WEAPON_Y + weapon_h/2)
+	x, y = pygame.mouse.get_pos()
+	mouse_vector_position.set(x, y)
+	pygame.draw.line(window, (0, 0, 0), (weapon_vector_position.x, weapon_vector_position.y), (mouse_vector_position.x, mouse_vector_position.y))
+	weapon_vector_position.substract(mouse_vector_position)
+	degree = weapon_vector_position.Get_angle()
+	#print("degree: {}, x: {}, y: {}".format(degree, weapon_vector_position.x, weapon_vector_position.y))
+	return degree
+
+def shoot_force(x, y, magnitude):
+	force = PVector(x, y)
+	force.normalize()
+	force.multiplication(magnitude)
+	return force
 
 def events ():
 	for event in pygame.event.get():
@@ -37,8 +60,6 @@ def events ():
 				global fire_flag
 				global degree
 				fire_flag = True
-				print("evento")
-				degree += 5
 				pass
 			elif (event.key == pygame.K_p):
 				global status_bar
@@ -92,12 +113,12 @@ def main():
 
 
 	global fire_flag
-	global degree
 
 	while(True):
 		background()
 
 		projectile_controller.Update_model()
+
 		projectile_controller.Update_view()
 
 		world_controller.Update_view()
@@ -109,10 +130,12 @@ def main():
 		weapon_bar_controller.Update_bar(status_bar)
 
 		if(fire_flag):
-			#force = PVector(50,-50)
+			#force = shoot_force(x, y, magnitude)
 			#projectile_controller.Apply_force(force)
 			fire_flag = False
 			#weapon_controller.Update_view(degree)
+		weapon_w, weapon_h = weapon_controller.Get_size()
+		degree = get_degrees(weapon_w, weapon_h)
 		weapon_controller.Update_view(degree)
 
 		events()

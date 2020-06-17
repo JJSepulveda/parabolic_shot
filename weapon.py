@@ -22,6 +22,8 @@ class weapon (object):
 		self.window_surface = surface
 		padding = 50
 		self.my_surface = pygame.Surface((self.w, self.h))
+		self.degree = 0
+		#self.main_center = (self.w/2, self.h/2)
 	def Get_surface(self):
 		return self.window_surface
 	def Set_weapon_surface(self, new_surface):
@@ -30,10 +32,21 @@ class weapon (object):
 		return self.my_surface
 	def Get_dimensions(self):
 		return self.x, self.y, self.w, self.h
+	def Get_size(self):
+		return self.w, self.h
 	def Set_position(self, x, y):
 		self.x = x
 		self.y = y
+	def Set_degree(self, new_degree):
+		if(new_degree > 270):
+			self.degree = 0
+		elif(new_degree > 90):
+			self.degree = 90
+		else:
+			self.degree = new_degree
 
+	def Get_degree(self):
+		return self.degree
 class weapon_bar (object):
 	def __init__(self, x, y, surface):
 		self.x = x
@@ -90,28 +103,28 @@ class weapon_bar (object):
 
 class weapon_view (object):
 	def __init__(self):
-		#self.r_weapon_surface = 0
 		pass
-	def Weapon_draw(self, x, y, w, h, weapon_surface, window_surface,degree):
-		weapon_surface.fill((200, 0, 0))
-		points = [(40, 0), (w, 0), (w, h), (40 , h)]
-		pygame.draw.polygon(weapon_surface, (0, 0, 100), points, 0)
-		blitted_surface = window_surface.blit(weapon_surface, (x, y))
-
-		old_center = blitted_surface.center
-		rotated_surface = pygame.transform.rotate(weapon_surface, degree)
+	def Weapon_draw(self, x, y, w, h, weapon_surface, window_surface, new_degree):
+		weapon_surface.fill((255, 255, 255))
+		weapon_surface.set_colorkey((255, 0, 0))
+		points = [(w/2, 0), (w, 0), (w, h), (w/2 , h)]
+		pygame.draw.polygon(weapon_surface, (0, 0, 0), points, 0)
+		#blitted_surface = window_surface.blit(weapon_surface, (x, y))
+		main_center = self.Calculate_weapon_position(x, y, w, h, weapon_surface)
+		rotated_surface = pygame.transform.rotate(weapon_surface, new_degree)
 		rotRect = rotated_surface.get_rect()
-		print(rotRect)
-		rotRect.center = old_center
+		rotRect.center = main_center
 		window_surface.blit(rotated_surface, rotRect)
 
-	def Weapon_rotate(self,surface, blitted_surface, degree):
-		old_center = blitted_surface.get_rect().center
-		rotated_surface = pygame.transform.rotate(blitted_surface, degree)
-		rotRect = rotated_surface.get_rect()
-		print(rotRect)
-		rotRect.center = old_center
-		surface.blit(rotated_surface, rotRect)
+	def Calculate_weapon_position(self, x, y, w, h, weapon_surface):
+		center_x = weapon_surface.get_width()/2
+		center_y = weapon_surface.get_height()/2
+		new_x = x + center_x 
+		new_y = y + center_y 
+
+		position = (new_x, new_y)
+
+		return position
 
 class weapon_bar_view (object):
 	def __init__(self):
@@ -132,12 +145,11 @@ class weapon_controller(object):
 		x, y, w, h = self.model.Get_dimensions()
 		surface = self.model.Get_surface()
 		weapon_surface = self.model.Get_mySurface()
-		self.view.Weapon_draw(x, y, w, h, weapon_surface, surface, degree)
-	def Rotate_weapon(self, degree):
-		my_surface =  self.model.Get_mySurface()
-		surface = self.model.Get_surface()
-		self.view.Weapon_rotate(surface, my_surface,degree)
-		#self.model.Set_weapon_surface(rotated_surface)
+		self.model.Set_degree(degree)
+		new_degree = self.model.Get_degree()
+		self.view.Weapon_draw(x, y, w, h, weapon_surface, surface, new_degree)
+	def Get_size(self):
+		return self.model.Get_size()
 
 class weapon_bar_controller (object):
 	def __init__(self, model, view):

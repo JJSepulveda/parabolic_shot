@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class PVector(object):
 	"""
@@ -105,3 +106,23 @@ class PVector(object):
 			self.multiplication(lim)
 	def Get_components(self):
 		return self.x, self.y
+
+	def Get_angle(self):
+		if(self.x == 0):
+			if(self.y < 0):
+				angle = 90
+			else:
+				angle = -90
+		else:
+			if(self.x >= 0 and self.y >= 0):
+				angle = math.pi - math.atan(self.y/self.x) # derecha izquierda
+			elif(self.x >= 0 and self.y < 0):
+				angle =  math.pi + math.atan(-self.y/self.x) # derecha abajo
+			elif(self.x < 0 and self.y >= 0):
+				angle = math.atan(self.y/-self.x) #derecha derecha
+			elif(self.x < 0 and self.y < 0):
+				angle = 2 * math.pi - math.atan(-self.y/-self.x) # izqeuirda abajo
+			
+			angle = math.degrees(angle)
+
+		return angle
