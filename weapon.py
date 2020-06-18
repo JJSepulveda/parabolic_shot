@@ -37,6 +37,8 @@ class weapon (object):
 	def Set_position(self, x, y):
 		self.x = x
 		self.y = y
+	def Get_position(self):
+		return self.x, self.y
 	def Set_degree(self, new_degree):
 		if(new_degree > 270):
 			self.degree = 0
@@ -131,7 +133,11 @@ class weapon_bar_view (object):
 		pass
 	def Bar_draw(self, x, y, w, h, surface):
 		points = [(x, y), (x + w, y), (x + w, y + h), (x , y + h)]
-		pygame.draw.polygon(surface, (0, 0, 100), points, 0)
+		pygame.draw.polygon(surface, (120, 50, 0), points, 0)
+
+	def Bar_border_draw(self, x, y, w, h, surface):
+		points = [(x, y), (x + w, y), (x + w, y + h), (x , y + h)]
+		pygame.draw.polygon(surface, (0, 0, 100), points, 3)
 
 ###################
 ## Controller
@@ -150,6 +156,8 @@ class weapon_controller(object):
 		self.view.Weapon_draw(x, y, w, h, weapon_surface, surface, new_degree)
 	def Get_size(self):
 		return self.model.Get_size()
+	def Get_position(self):
+		return self.model.Get_position()
 
 class weapon_bar_controller (object):
 	def __init__(self, model, view):
@@ -160,6 +168,8 @@ class weapon_bar_controller (object):
 		x, y, w, h = self.model.Get_dimensions()
 		surface = self.model.Get_surface()
 		self.view.Bar_draw(x, y, w, h, surface)
+		w = self.model.Get_max_bar_width()
+		self.view.Bar_border_draw(x, y, w, h, surface)
 	
 	def Update_bar(self, update_status):
 		magnitude = self.model.Get_vector_magnitude()
@@ -175,4 +185,3 @@ class weapon_bar_controller (object):
 	def Reset(self):
 		self.model.Set_vector_magnitude(0)
 		self.model.Set_width(0)
-

@@ -71,6 +71,10 @@ class PVector(object):
 		self.x += vector2.x
 		self.y += vector2.y
 
+	def add_scalar(self, x, y):
+		self.x += x
+		self.y += y
+
 	def substract(self, vector2):
 		self.x -= vector2.x
 		self.y -= vector2.y
@@ -110,9 +114,9 @@ class PVector(object):
 	def Get_angle(self):
 		if(self.x == 0):
 			if(self.y < 0):
-				angle = 90
-			else:
 				angle = -90
+			else:
+				angle = 90
 		else:
 			if(self.x >= 0 and self.y >= 0):
 				angle = math.pi - math.atan(self.y/self.x) # derecha izquierda

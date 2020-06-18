@@ -30,6 +30,7 @@ pygame.display.set_caption("Parabolic shot")
 fpsClock = pygame.time.Clock()
 
 fire_flag = False
+holding_up_ball_flag = True
 
 weapon_vector_position = PVector(WEAPON_X, WEAPON_Y)
 mouse_vector_position = PVector(0, 0)
@@ -68,6 +69,15 @@ def shoot_force(x, y, magnitude):
 	force.multiplication(magnitude)
 	return force
 
+def projectile_position(x, y, w_x, w_y, w_w, w_h):
+	magnitude = 60
+	vector = PVector(x, -y)
+	vector.normalize()
+	vector.multiplication(magnitude)
+	vector.add_scalar(w_x+w_w/2, w_y +w_h/2)
+	return vector.x, vector.y
+
+
 def events ():
 	for event in pygame.event.get():
 		if (event.type == QUIT):
@@ -86,50 +96,14 @@ def background():
 	#points = [(0, 0), (WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)]
 	#pygame.draw.polygon(window, (0, 0, 0), points, 3)
 
+def text(txt,x,y, textColor = (0, 0, 0)):
+	font = pygame.font.Font("C:/Windows/Fonts/COOPBL.TTF",14)
+	text = font.render(txt, True, textColor)
+	window.blit(text, (x, y))
+
 def update_surface_task():
 	pygame.display.update()
 	fpsClock.tick(FPS)
-
-def srpites_test(cols, rows):
-	total_cells = cols * rows
-	sheet = pygame.image.load('sprites/balah.png')
-	sheet_scale = pygame.transform.scale(sheet, (200, 200))
-
-	rect = sheet_scale.get_rect()
-	w = rect.width/cols
-	h = rect.height/rows
- 
-	center = (w/2, h/2)
-
-	rect_position = (0 + center[0], 0 + center[1])
-
-	#window.blit(sheet_scale, rect_position, (0, 0, w, h))
-
-	cells = get_cells_dimensions_array(cols, rows, w, h)
-	print(cells[0])
-	print(cells[1])
-
-	n = 1
-	return sheet_scale, rect_position, cells, (w, h)
-
-def get_cells_dimensions_array(cols, rows, w, h):
-	cells = []
-	for r in range(rows):
-		for c in range(cols):
-			x1 = c*w
-			y1 = r*h
-
-			frame_data = {'x1': x1, 'y1': y1}
-
-			#print(frame_data)
-			cells.append(frame_data)
-
-	return cells
-
-
-def change_sprite():
-	pass
-
 
 ##################################################
 # Tiro parabolico
@@ -156,7 +130,7 @@ def main():
 	world_view = world.world_view()
 	world_controller = world.world_controller(world_model, world_view)
 
-	referee_model = world.rules(projectile_controller, WIDTH, HEIGHT)
+	referee_model = world.rules(projectile_controller, world_controller, WIDTH, HEIGHT)
 	referee_view = world.rules_view()
 	referee_controller = world.rules_controller(referee_model, referee_view)
 
@@ -164,7 +138,7 @@ def main():
 	weapon_view = weapon.weapon_view()
 	weapon_controller = weapon.weapon_controller(weapon_model, weapon_view)
 
-	weapon_bar = weapon.weapon_bar(100, 100, window)
+	weapon_bar = weapon.weapon_bar(10, HEIGHT + 10, window)
 	weapon_bar_view = weapon.weapon_bar_view()
 	weapon_bar_controller = weapon.weapon_bar_controller(weapon_bar, weapon_bar_view)
 
@@ -174,23 +148,15 @@ def main():
 	shoot_y = 0
 	degree = 0
 
-	sprt_surf, pos, cells, size = srpites_test(3, 3)
-
 	global fire_flag
+	global holding_up_ball_flag
 	status_bar = False
 
-	#srpit update frames
-	actual_time = 0
-	next_frame = 80
-	print("clock: {}".format(fpsClock.get_rawtime))
-	frame = 0
-
 	while(True):
-		actual_time += fpsClock.get_time()
-		#print("clock: {}".format(fpsClock.get_fps()))
 		background()
 
-		projectile_controller.Update_model()
+		if(not holding_up_ball_flag):
+			projectile_controller.Update_model()
 
 		projectile_controller.Update_view()
 
@@ -202,11 +168,26 @@ def main():
 
 		weapon_bar_controller.Update_bar(status_bar)
 
+		fps = np.floor(fpsClock.get_fps())
+
+		text("FPS: {}".format(fps), 400, HEIGHT + 10)
+
+		shoot_angle = np.floor(degree)
+
+		text("angle: {}".format(shoot_angle), 400, HEIGHT + 25)
+
 		#state machine
 		if(actual_state == AIMING_STATE):
 			weapon_w, weapon_h = weapon_controller.Get_size()
 			degree = get_degrees(weapon_w, weapon_h)
 			weapon_controller.Update_view(degree)
+			
+			degree = limit_degrees(degree)
+			projectile_new_x, projectile_new_y = get_shoot_components(degree)
+			weapon_x, weapon_y = weapon_controller.Get_position()
+			projectile_new_x, projectile_new_y = \
+				projectile_position(projectile_new_x, projectile_new_y, weapon_x, weapon_y, weapon_w, weapon_h)
+			projectile_controller.Set_position(projectile_new_x, projectile_new_y)
 
 			if(fire_flag):
 				fire_flag = False
@@ -220,11 +201,16 @@ def main():
 			weapon_controller.Update_view(degree)
 			if(fire_flag):
 				magnitude = weapon_bar_controller.Get_magnitude()
-				force = shoot_force(shoot_x, shoot_y, magnitude)
+				#negativo porque la y crece hacia abajo, y el angulo
+				#esta hacia arriba
+				force = shoot_force(shoot_x, -shoot_y, magnitude)
 				projectile_controller.Apply_force(force)
 				fire_flag = False
 				actual_state = POST_SHOOT_STATE
 				status_bar =  False
+				holding_up_ball_flag = False
+				#print("componenetes de la fuerza: {}, {}".format(force.x, force.y))
+				#print(magnitude)
 				print("change state")
 		elif(actual_state == POST_SHOOT_STATE):
 			weapon_controller.Update_view(degree)
@@ -233,21 +219,12 @@ def main():
 				projectile_controller.Reset()
 				weapon_bar_controller.Reset()
 				actual_state = AIMING_STATE
+				holding_up_ball_flag = True
 				print("change state")
-
-
-		if(actual_time > next_frame):
-			frame = (frame + 1) % 7
-			actual_time = 0
-
-		window.blit(sprt_surf, pos)
-
-		window.blit(sprt_surf, (pos[0], pos[1] +200), (cells[frame]['x1'], cells[frame]['y1'], size[0], size[1]))
 		
 		events()
 
 		update_surface_task()
-		pass
 
 if(__name__ == "__main__"):
 	main()

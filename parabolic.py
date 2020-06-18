@@ -135,3 +135,5 @@ class projectile_controller(object):
 		x, y = self.model.Get_position()
 		r = self.model.Get_radius()
 		return x, y, r
+	def Set_position(self, x, y):
+		self.model.Set_position(x, y)
