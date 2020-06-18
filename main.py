@@ -172,6 +172,8 @@ def main():
 
 		text("FPS: {}".format(fps), 400, HEIGHT + 10)
 
+		text("Wind: no", 10, HEIGHT + 40)
+
 		shoot_angle = np.floor(degree)
 
 		text("angle: {}".format(shoot_angle), 400, HEIGHT + 25)
