@@ -22,7 +22,8 @@ WEAPON_X = 50
 WEAPON_Y = 400
 AIMING_STATE = 0
 SHOOT_STATE = 1
-POST_SHOOT_STATE = 3 
+POST_SHOOT_STATE = 2
+
 
 pygame.init()
 window = pygame.display.set_mode((FINAL_WIDTH,FINAL_HEIGHT))
@@ -77,6 +78,8 @@ def projectile_position(x, y, w_x, w_y, w_w, w_h):
 	vector.add_scalar(w_x+w_w/2, w_y +w_h/2)
 	return vector.x, vector.y
 
+def get_time_ms():
+	return fpsClock.get_time()
 
 def events ():
 	for event in pygame.event.get():
@@ -151,8 +154,14 @@ def main():
 	global fire_flag
 	global holding_up_ball_flag
 	status_bar = False
+	
+	actual_time = 0
 
-	while(True):
+	explosion_delay = 3000
+
+
+	while(True):		
+
 		background()
 
 		if(not holding_up_ball_flag):
@@ -216,14 +225,24 @@ def main():
 				print("change state")
 		elif(actual_state == POST_SHOOT_STATE):
 			weapon_controller.Update_view(degree)
+
+			if(actual_time > explosion_delay):
+				projectile_controller.Set_explosion()
+			else:
+				actual_time += get_time_ms()
+
 			if(fire_flag):
 				fire_flag = False
 				projectile_controller.Reset()
 				weapon_bar_controller.Reset()
 				actual_state = AIMING_STATE
 				holding_up_ball_flag = True
+				actual_time = 0
 				print("change state")
 		
+		p_x, p_y = pygame.mouse.get_pos()
+		print(projectile_controller.Get_damage(p_x, p_y))
+
 		events()
 
 		update_surface_task()
