@@ -176,7 +176,7 @@ class weapon_bar_controller (object):
 		self.model.Interpolated_width(magnitude)
 		if(not update_status):
 			return
-		magnitude += 0.5
+		magnitude += 1
 		self.model.Set_vector_magnitude(magnitude)
 
 	def Get_magnitude(self):

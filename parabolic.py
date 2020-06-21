@@ -7,6 +7,7 @@ from utilities import *
 ## Consts
 ###################
 GRAVITY_ACCELERATION = 0.1
+EXPLOSION_DELAY_MS = 5000
 
 ###################
 ## Global varaibles
@@ -29,6 +30,7 @@ class projectile(object):
 		self.projectile_color = (0, 0, 0)
 		self.surface = surface
 		self.explosion_flag = False
+		self.time_to_explosion_ms = EXPLOSION_DELAY_MS #ms
 	def Set_position(self, x, y):
 		self.projectile_position.set(x, y)
 	def Get_position(self):
@@ -112,7 +114,7 @@ class projectile(object):
 		target_vector.substract(self.projectile_position)
 		distance = target_vector.mag()
 
-		if(distance < 40):
+		if(distance < 20):
 			#max damage
 			damage = 100
 		elif(distance > 86):
@@ -120,7 +122,13 @@ class projectile(object):
 		else:
 			damage = - (distance/10)**2 + 74
 		return damage
-
+	def Set_time(self, actual_time):
+		if(actual_time < 0):
+			self.time_to_explosion_ms = 0
+		else:
+			self.time_to_explosion_ms = actual_time
+	def Get_time(self):
+		return self.time_to_explosion_ms
 
 
 
@@ -130,11 +138,18 @@ class projectile(object):
 ###################
 class projectile_view(object):
 	def __init__(self):
+		self.font = pygame.font.Font("C:/Windows/Fonts/COOPBL.TTF",14)
 		pass
 	def Projectile_draw(self, x, y, radius, color, surface):
 		x = np.int32(x)
 		y = np.int32(y)
 		pygame.draw.circle(surface, color, (x,y), radius)
+	def Time_draw(self, x, y, txt, surface):
+		x -= 10
+		y -= 30
+		textColor = (0, 0, 0)
+		text = self.font.render(txt, True, textColor)
+		surface.blit(text, (x, y))
 
 ###################
 ## controller
@@ -151,6 +166,7 @@ class projectile_controller(object):
 		self.model.Set_velocity(0,0)
 		self.model.Set_explosion_flag(False)
 		self.model.Set_color((0,0,0))
+		self.model.Set_time(EXPLOSION_DELAY_MS)
 		pass
 	def Update_model(self):
 		explosion_flag = self.model.Get_explosion_flag()
@@ -166,6 +182,9 @@ class projectile_controller(object):
 		color = self.model.Get_color()
 		surface = self.model.Get_surface()
 		self.view.Projectile_draw(x, y, r, color, surface)
+		time = np.floor(self.model.Get_time())
+		txt = "{}".format(time)
+		self.view.Time_draw(x, y, txt, surface)
 	def Ground_colision(self, h):
 		v_x, v_y = self.model.Get_velocity()
 		v_y *= -0.4
@@ -185,3 +204,5 @@ class projectile_controller(object):
 	def Get_damage(self, target_x, target_y):
 		damage = self.model.Get_damage(target_x, target_y)
 		return damage
+	def Set_time(self, actual_time):
+		self.model.Set_time(EXPLOSION_DELAY_MS - actual_time)

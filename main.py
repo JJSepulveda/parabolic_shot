@@ -22,7 +22,8 @@ WEAPON_X = 50
 WEAPON_Y = 400
 AIMING_STATE = 0
 SHOOT_STATE = 1
-POST_SHOOT_STATE = 2
+POST_EXPLOSION_STATE = 2
+EXPLOSION_STATE = 3
 
 
 pygame.init()
@@ -42,7 +43,7 @@ def get_degrees(weapon_w, weapon_h):
 	weapon_vector_position.set(WEAPON_X + weapon_w/2, WEAPON_Y + weapon_h/2)
 	x, y = pygame.mouse.get_pos()
 	mouse_vector_position.set(x, y)
-	pygame.draw.line(window, (0, 0, 0), (weapon_vector_position.x, weapon_vector_position.y), (mouse_vector_position.x, mouse_vector_position.y))
+	#pygame.draw.line(window, (0, 0, 0), (weapon_vector_position.x, weapon_vector_position.y), (mouse_vector_position.x, mouse_vector_position.y))
 	weapon_vector_position.substract(mouse_vector_position)
 	degree = weapon_vector_position.Get_angle()
 	#print("degree: {}, x: {}, y: {}".format(degree, weapon_vector_position.x, weapon_vector_position.y))
@@ -145,6 +146,10 @@ def main():
 	weapon_bar_view = weapon.weapon_bar_view()
 	weapon_bar_controller = weapon.weapon_bar_controller(weapon_bar, weapon_bar_view)
 
+	target_model = world.target(500, HEIGHT - 35, 10, window)
+	target_view = world.target_view()
+	target_controller = world.target_controller(target_model, target_view)
+
 	actual_state = AIMING_STATE
 
 	shoot_x = 0
@@ -157,12 +162,14 @@ def main():
 	
 	actual_time = 0
 
-	explosion_delay = 3000
+	explosion_delay = 5000
 
 
 	while(True):		
 
 		background()
+
+		target_controller.Update_view()
 
 		if(not holding_up_ball_flag):
 			projectile_controller.Update_model()
@@ -217,31 +224,44 @@ def main():
 				force = shoot_force(shoot_x, -shoot_y, magnitude)
 				projectile_controller.Apply_force(force)
 				fire_flag = False
-				actual_state = POST_SHOOT_STATE
+				actual_state = EXPLOSION_STATE
 				status_bar =  False
 				holding_up_ball_flag = False
 				#print("componenetes de la fuerza: {}, {}".format(force.x, force.y))
 				#print(magnitude)
 				print("change state")
-		elif(actual_state == POST_SHOOT_STATE):
+		elif(actual_state == EXPLOSION_STATE):
 			weapon_controller.Update_view(degree)
 
+			actual_time += get_time_ms()
+
+			projectile_controller.Set_time(actual_time)
+
 			if(actual_time > explosion_delay):
+				#obtenemos el daño si es que hay
+				target_x, target_y = target_controller.Get_pos()
+				damage = projectile_controller.Get_damage(target_x, target_y)
+				print(damage)
+				#print(projectile_controller.Get_pos)
+				target_controller.Update_HP(damage)
 				projectile_controller.Set_explosion()
-			else:
-				actual_time += get_time_ms()
+				actual_state = POST_EXPLOSION_STATE
+
+		elif(actual_state == POST_EXPLOSION_STATE):
+			weapon_controller.Update_view(degree)
 
 			if(fire_flag):
 				fire_flag = False
 				projectile_controller.Reset()
 				weapon_bar_controller.Reset()
+				target_controller.Reset()
 				actual_state = AIMING_STATE
 				holding_up_ball_flag = True
 				actual_time = 0
 				print("change state")
 		
-		p_x, p_y = pygame.mouse.get_pos()
-		print(projectile_controller.Get_damage(p_x, p_y))
+		#p_x, p_y = pygame.mouse.get_pos()
+		#print(projectile_controller.Get_damage(p_x, p_y))
 
 		events()
 
