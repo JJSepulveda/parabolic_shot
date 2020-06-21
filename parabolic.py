@@ -7,7 +7,7 @@ from utilities import *
 ## Consts
 ###################
 GRAVITY_ACCELERATION = 0.1
-EXPLOSION_DELAY_MS = 5000
+EXPLOSION_DELAY_MS = 1000
 
 ###################
 ## Global varaibles

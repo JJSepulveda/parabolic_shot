@@ -6,6 +6,7 @@ import parabolic
 import world
 import weapon
 import math
+import ia_player
 from utilities import *
 
 WIDTH = 700
@@ -24,6 +25,7 @@ AIMING_STATE = 0
 SHOOT_STATE = 1
 POST_EXPLOSION_STATE = 2
 EXPLOSION_STATE = 3
+AIMING_IA_STATE = 4
 
 
 pygame.init()
@@ -31,7 +33,7 @@ window = pygame.display.set_mode((FINAL_WIDTH,FINAL_HEIGHT))
 pygame.display.set_caption("Parabolic shot")
 fpsClock = pygame.time.Clock()
 
-fire_flag = False
+change_state_flag = False
 holding_up_ball_flag = True
 
 weapon_vector_position = PVector(WEAPON_X, WEAPON_Y)
@@ -82,6 +84,16 @@ def projectile_position(x, y, w_x, w_y, w_w, w_h):
 def get_time_ms():
 	return fpsClock.get_time()
 
+def weapon_and_projectile_update(degree, weapon_controller, projectile_controller):
+	weapon_w, weapon_h = weapon_controller.Get_size()
+	projectile_new_x, projectile_new_y = get_shoot_components(degree)
+	weapon_x, weapon_y = weapon_controller.Get_position()
+	projectile_new_x, projectile_new_y = \
+		projectile_position(projectile_new_x, projectile_new_y, weapon_x, weapon_y, weapon_w, weapon_h)
+
+	weapon_controller.Update_view(degree)
+	projectile_controller.Set_position(projectile_new_x, projectile_new_y)
+
 def events ():
 	for event in pygame.event.get():
 		if (event.type == QUIT):
@@ -89,8 +101,8 @@ def events ():
 			sys.exit()
 		elif(event.type == pygame.KEYDOWN):
 			if(event.key == pygame.K_o):
-				global fire_flag
-				fire_flag = True
+				global change_state_flag
+				change_state_flag = True
 				pass
 			elif (event.key == pygame.K_p):
 				pass
@@ -150,20 +162,27 @@ def main():
 	target_view = world.target_view()
 	target_controller = world.target_controller(target_model, target_view)
 
-	actual_state = AIMING_STATE
+	player_model = ia_player.player()
+	player_view = ia_player.player_view()
+	player_controller = ia_player.player_controller(player_model, player_view)
+
+	actual_state = AIMING_IA_STATE
+	IA_mode = True if (actual_state == AIMING_IA_STATE) else False
 
 	shoot_x = 0
 	shoot_y = 0
 	degree = 0
 
-	global fire_flag
+	global change_state_flag
 	global holding_up_ball_flag
+
 	status_bar = False
-	
 	actual_time = 0
 
-	explosion_delay = 5000
-
+	explosion_delay = 1000
+	magnitude = 0
+	shoot_x = 0
+	shoot_Y = 0
 
 	while(True):		
 
@@ -195,41 +214,56 @@ def main():
 		text("angle: {}".format(shoot_angle), 400, HEIGHT + 25)
 
 		#state machine
+		if(actual_state == AIMING_IA_STATE):
+			target_x, target_y = target_controller.Get_pos()
+			degree, magnitude = player_controller.Get_predictions(target_x, target_y)
+			degree = limit_degrees(degree)
+			weapon_and_projectile_update(degree, weapon_controller, projectile_controller)
+
+			shoot_x, shoot_y = get_shoot_components(degree)
+
+			force = shoot_force(shoot_x, -shoot_y, magnitude)
+			projectile_controller.Apply_force(force)
+			holding_up_ball_flag = False
+
+			actual_state = EXPLOSION_STATE
+
+			print("degrees and force: {}, {}".format(degree, magnitude))
+
 		if(actual_state == AIMING_STATE):
+			#set new position of the weapon
 			weapon_w, weapon_h = weapon_controller.Get_size()
 			degree = get_degrees(weapon_w, weapon_h)
-			weapon_controller.Update_view(degree)
-			
 			degree = limit_degrees(degree)
-			projectile_new_x, projectile_new_y = get_shoot_components(degree)
-			weapon_x, weapon_y = weapon_controller.Get_position()
-			projectile_new_x, projectile_new_y = \
-				projectile_position(projectile_new_x, projectile_new_y, weapon_x, weapon_y, weapon_w, weapon_h)
-			projectile_controller.Set_position(projectile_new_x, projectile_new_y)
+			weapon_and_projectile_update(degree, weapon_controller, projectile_controller)
 
-			if(fire_flag):
-				fire_flag = False
-				degree = limit_degrees(degree)
+			if(change_state_flag):
+				#print("degreees: {}, magnitude: {}".format(degrees, magnitude))
+				change_state_flag = False
+				#degree = limit_degrees(degree)
 				shoot_x, shoot_y = get_shoot_components(degree)
 				actual_state = SHOOT_STATE
 				status_bar = True
 				print("change state")
 
 		elif(actual_state == SHOOT_STATE):
+			
 			weapon_controller.Update_view(degree)
-			if(fire_flag):
+			
+			if(change_state_flag):
 				magnitude = weapon_bar_controller.Get_magnitude()
 				#negativo porque la y crece hacia abajo, y el angulo
 				#esta hacia arriba
 				force = shoot_force(shoot_x, -shoot_y, magnitude)
 				projectile_controller.Apply_force(force)
-				fire_flag = False
+				change_state_flag = False
 				actual_state = EXPLOSION_STATE
 				status_bar =  False
 				holding_up_ball_flag = False
 				#print("componenetes de la fuerza: {}, {}".format(force.x, force.y))
 				#print(magnitude)
 				print("change state")
+		
 		elif(actual_state == EXPLOSION_STATE):
 			weapon_controller.Update_view(degree)
 
@@ -242,7 +276,6 @@ def main():
 				target_x, target_y = target_controller.Get_pos()
 				damage = projectile_controller.Get_damage(target_x, target_y)
 				print(damage)
-				#print(projectile_controller.Get_pos)
 				target_controller.Update_HP(damage)
 				projectile_controller.Set_explosion()
 				actual_state = POST_EXPLOSION_STATE
@@ -250,12 +283,12 @@ def main():
 		elif(actual_state == POST_EXPLOSION_STATE):
 			weapon_controller.Update_view(degree)
 
-			if(fire_flag):
-				fire_flag = False
+			if(change_state_flag or IA_mode):
+				change_state_flag = False
 				projectile_controller.Reset()
 				weapon_bar_controller.Reset()
 				target_controller.Reset()
-				actual_state = AIMING_STATE
+				actual_state = AIMING_IA_STATE if (IA_mode) else AIMING_STATE
 				holding_up_ball_flag = True
 				actual_time = 0
 				print("change state")
