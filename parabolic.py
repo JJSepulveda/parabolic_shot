@@ -206,3 +206,5 @@ class projectile_controller(object):
 		return damage
 	def Set_time(self, actual_time):
 		self.model.Set_time(EXPLOSION_DELAY_MS - actual_time)
+	def Get_position(self):
+		return self.model.Get_position()

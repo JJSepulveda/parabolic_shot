@@ -131,8 +131,8 @@ class PVector(object):
 
 		return angle
 
-	def __sub__(self, x, y):
-		subsx = self.x - x
-		subsy = self.y - y
+	def __sub__(self, vector2):
+		subsx = self.x - vector2.x
+		subsy = self.y - vector2.y
 		vector = PVector(subsx, subsy)
 		return vector

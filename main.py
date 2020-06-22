@@ -26,6 +26,10 @@ SHOOT_STATE = 1
 POST_EXPLOSION_STATE = 2
 EXPLOSION_STATE = 3
 AIMING_IA_STATE = 4
+AIMING_TRAIN_STATE = 5
+EXPLOSION_TRAIN_STATE = 6
+POST_EXPLOSION_TRAIN_STATE = 7
+TRAIN_POPULATION = 100
 
 
 pygame.init()
@@ -90,9 +94,35 @@ def weapon_and_projectile_update(degree, weapon_controller, projectile_controlle
 	weapon_x, weapon_y = weapon_controller.Get_position()
 	projectile_new_x, projectile_new_y = \
 		projectile_position(projectile_new_x, projectile_new_y, weapon_x, weapon_y, weapon_w, weapon_h)
-
-	weapon_controller.Update_view(degree)
 	projectile_controller.Set_position(projectile_new_x, projectile_new_y)
+
+def projectile_apply_force(target_x, target_max_x, player_controller, weapon_controller, projectile_controller):
+	source_x, _ = projectile_controller.Get_position()
+	target_x /= target_max_x
+	source_x /= target_max_x
+	degree, magnitude = player_controller.Get_predictions(target_x, source_x)			
+	degree = limit_degrees(degree)
+	weapon_and_projectile_update(degree, weapon_controller, projectile_controller)
+
+	shoot_x, shoot_y = get_shoot_components(degree)
+
+	force = shoot_force(shoot_x, -shoot_y, magnitude)
+	projectile_controller.Apply_force(force)
+	#print("degrees and force: {}, {}".format(degree, magnitude))
+
+def Make_population_of_projectils():
+	population = []
+	for i in range(TRAIN_POPULATION):
+		p_m = parabolic.projectile(20, 400, 10, window)
+		p_v = parabolic.projectile_view()
+		p_c = parabolic.projectile_controller(p_m, p_v)
+		population.append(p_c)
+	return population
+
+def Update_projectile(projectile_controller):
+	if(not holding_up_ball_flag):
+		projectile_controller.Update_model()
+	projectile_controller.Update_view()
 
 def events ():
 	for event in pygame.event.get():
@@ -166,8 +196,14 @@ def main():
 	player_view = ia_player.player_view()
 	player_controller = ia_player.player_controller(player_model, player_view)
 
-	actual_state = AIMING_IA_STATE
+	trainer = ia_player.trainer(TRAIN_POPULATION)
+	projectile_matrix = Make_population_of_projectils()
+
+	actual_state = AIMING_TRAIN_STATE
 	IA_mode = True if (actual_state == AIMING_IA_STATE) else False
+
+	if( actual_state == AIMING_TRAIN_STATE): 
+		target_controller.Disable_bar()
 
 	shoot_x = 0
 	shoot_y = 0
@@ -184,16 +220,18 @@ def main():
 	shoot_x = 0
 	shoot_Y = 0
 
+	# son valores necesarios para la posición del proyectil, como no cambian literalmente nunca
+	# los he movido aqui.
+	weapon_w, weapon_h = weapon_controller.Get_size()
+	target_max_x = target_controller.Get_x_range()
+
 	while(True):		
 
 		background()
 
 		target_controller.Update_view()
 
-		if(not holding_up_ball_flag):
-			projectile_controller.Update_model()
-
-		projectile_controller.Update_view()
+		#Update_projectile(projectile_controller)
 
 		world_controller.Update_view()
 
@@ -213,26 +251,59 @@ def main():
 
 		text("angle: {}".format(shoot_angle), 400, HEIGHT + 25)
 
+		weapon_controller.Update_view(degree)
+
+		# son necesarios mas adelante en la maquina de estados y como su valor
+		# no cambia, hasta que el juego se reseta, decidi ponerlo aqui.
+		target_x, target_y = target_controller.Get_pos()
+
 		#state machine
-		if(actual_state == AIMING_IA_STATE):
-			target_x, target_y = target_controller.Get_pos()
-			degree, magnitude = player_controller.Get_predictions(target_x, target_y)			
-			degree = limit_degrees(degree)
-			weapon_and_projectile_update(degree, weapon_controller, projectile_controller)
+		if(actual_state == AIMING_TRAIN_STATE):
 
-			shoot_x, shoot_y = get_shoot_components(degree)
+			for i in range(TRAIN_POPULATION):
+				projectile = projectile_matrix[i]
+				player = trainer.Get_single(i)
+				projectile_apply_force(target_x, target_max_x, player, \
+						weapon_controller, projectile)
+			
+			holding_up_ball_flag = False
 
-			force = shoot_force(shoot_x, -shoot_y, magnitude)
-			projectile_controller.Apply_force(force)
+			actual_state = EXPLOSION_TRAIN_STATE
+		elif(actual_state == EXPLOSION_TRAIN_STATE):
+			actual_time += get_time_ms()
+
+			for i in range(TRAIN_POPULATION):
+				projectile = projectile_matrix[i]
+				projectile.Set_time(actual_time)
+				if(actual_time > explosion_delay):
+					source_x, soruce_y = projectile.Get_position()
+					trainer.Set_population_fitness(target_x, target_y, source_x, soruce_y, i)
+					projectile.Set_explosion()
+
+			if(actual_time > explosion_delay):
+				actual_time = 0
+				actual_state = POST_EXPLOSION_TRAIN_STATE
+				print(trainer.Get_population_fitness())
+				trainer.Make_new_generation()
+
+		elif(actual_state == POST_EXPLOSION_TRAIN_STATE):
+			for i in range(TRAIN_POPULATION):
+				projectile = projectile_matrix[i]
+				projectile.Reset()
+
+			target_controller.Reset()		
+			holding_up_ball_flag = True
+			actual_state = AIMING_TRAIN_STATE
+		elif(actual_state == AIMING_IA_STATE):
+
+			projectile_apply_force(target_x, target_max_x, player_controller, weapon_controller, projectile_controller)
+			
 			holding_up_ball_flag = False
 
 			actual_state = EXPLOSION_STATE
 
-			print("degrees and force: {}, {}".format(degree, magnitude))
-
-		if(actual_state == AIMING_STATE):
+		elif(actual_state == AIMING_STATE):
 			#set new position of the weapon
-			weapon_w, weapon_h = weapon_controller.Get_size()
 			degree = get_degrees(weapon_w, weapon_h)
 			degree = limit_degrees(degree)
 			weapon_and_projectile_update(degree, weapon_controller, projectile_controller)
@@ -245,8 +316,6 @@ def main():
 				print("change state")
 
 		elif(actual_state == SHOOT_STATE):
-			
-			weapon_controller.Update_view(degree)
 			
 			if(change_state_flag):
 				magnitude = weapon_bar_controller.Get_magnitude()
@@ -263,23 +332,18 @@ def main():
 				print("change state")
 		
 		elif(actual_state == EXPLOSION_STATE):
-			weapon_controller.Update_view(degree)
-
 			actual_time += get_time_ms()
 
 			projectile_controller.Set_time(actual_time)
 
 			if(actual_time > explosion_delay):
-				#obtenemos el daño si es que hay
-				target_x, target_y = target_controller.Get_pos()
+				#obtenemos el daño si es que hay				
 				damage = projectile_controller.Get_damage(target_x, target_y)
-				print(damage)
 				target_controller.Update_HP(damage)
 				projectile_controller.Set_explosion()
 				actual_state = POST_EXPLOSION_STATE
 
 		elif(actual_state == POST_EXPLOSION_STATE):
-			weapon_controller.Update_view(degree)
 
 			if(change_state_flag or IA_mode):
 				change_state_flag = False
@@ -293,6 +357,11 @@ def main():
 		
 		#p_x, p_y = pygame.mouse.get_pos()
 		#print(projectile_controller.Get_damage(p_x, p_y))
+
+		for i in range(TRAIN_POPULATION):
+			projectile = projectile_matrix[i]
+			projectile.Update_model()
+			projectile.Update_view()
 
 		events()
 

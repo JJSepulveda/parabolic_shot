@@ -94,6 +94,8 @@ class target(object):
 		self.bar_height = 13
 		self.color = (0, 0, 255)
 		self.bar_color = (255, 0, 0)
+		self.max_x = 600
+		self.bar_state = True
 	def Get_pos(self):
 		return self.x, self.y
 	def Get_HP(self):
@@ -117,12 +119,20 @@ class target(object):
 		return self.bar_color
 	def Get_surface(self):
 		return self.surface
+	def Set_x_range(self, max_x):
+		self.max_x = max_x
+	def Get_x_range(self):
+		return self.max_x
 	def Random_position(self):
-		self.x = np.random.randint(200, 600)
+		self.x = np.random.randint(200, self.max_x)
 	def Reset(self):
 		self.HP_points = MAX_HP_POINTS
 		self.Update_bar()
 		self.Random_position()
+	def Disable_bar(self):
+		self.bar_state = False
+	def Get_bar_status(self):
+		return self.bar_state
 
 		
 
@@ -203,8 +213,14 @@ class target_controller(object):
 		color = self.model.Get_color()
 		self.view.Draw_target(x, y, r, color, surface)
 
-		bar_w, bar_h = self.model.Get_bar_size()
-		bar_color = self.model.Get_bar_color()
-		self.view.Draw_HP_points(x, y, bar_w, bar_h, MAX_TARGET_BAR_WIDTH, bar_color, surface)
+		bar_status = self.model.Get_bar_status()
+		if(bar_status):
+			bar_w, bar_h = self.model.Get_bar_size()
+			bar_color = self.model.Get_bar_color()
+			self.view.Draw_HP_points(x, y, bar_w, bar_h, MAX_TARGET_BAR_WIDTH, bar_color, surface)
 	def Reset(self):
 		self.model.Reset()
+	def Get_x_range(self):
+		return self.model.Get_x_range()
+	def Disable_bar(self):
+		self.model.Disable_bar()
