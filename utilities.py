@@ -130,3 +130,9 @@ class PVector(object):
 			angle = math.degrees(angle)
 
 		return angle
+
+	def __sub__(self, x, y):
+		subsx = self.x - x
+		subsy = self.y - y
+		vector = PVector(subsx, subsy)
+		return vector

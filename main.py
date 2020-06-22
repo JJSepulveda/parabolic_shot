@@ -216,7 +216,7 @@ def main():
 		#state machine
 		if(actual_state == AIMING_IA_STATE):
 			target_x, target_y = target_controller.Get_pos()
-			degree, magnitude = player_controller.Get_predictions(target_x, target_y)
+			degree, magnitude = player_controller.Get_predictions(target_x, target_y)			
 			degree = limit_degrees(degree)
 			weapon_and_projectile_update(degree, weapon_controller, projectile_controller)
 
@@ -238,9 +238,7 @@ def main():
 			weapon_and_projectile_update(degree, weapon_controller, projectile_controller)
 
 			if(change_state_flag):
-				#print("degreees: {}, magnitude: {}".format(degrees, magnitude))
 				change_state_flag = False
-				#degree = limit_degrees(degree)
 				shoot_x, shoot_y = get_shoot_components(degree)
 				actual_state = SHOOT_STATE
 				status_bar = True
